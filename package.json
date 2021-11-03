@@ -7,26 +7,37 @@
     "appId": "com.plter.videomerger",
     "files": [
       "!src"
-    ]
+    ],
+    "productName": "视频合并工具",
+    "copyright": "Copyright © 2021 Peter Chen",
+    "asar": false
+  },
+  "win": {
+    "target": "nsis"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
   },
   "scripts": {
     "start": "electron .",
-    "build": "webpack ./src/index/renderer.js -o ./dist/index --mode production",
-    "dev": "webpack ./src/index/renderer.js -o ./dist/index --mode development -w",
-    "dist": "npm run build && electron-builder --dir"
+    "build": "webpack ./src/index/renderer.js -o ./buildout/index --mode production",
+    "dev": "webpack ./src/index/renderer.js -o ./buildout/index --mode development -w",
+    "pack_mac": "electron-builder --mac",
+    "pack_win": "electron-builder --win --x64",
+    "dist": "npm run build && npm run pack_mac && npm run pack_win",
+    "dist_mac": "npm run build && npm run pack_mac",
+    "dist_win": "npm run build && npm run pack_win"
   },
   "repository": "https://github.com/electron/electron-quick-start",
   "keywords": [
-    "Electron",
-    "quick",
-    "start",
-    "tutorial",
-    "demo"
+    "video merge"
   ],
   "author": "GitHub",
   "license": "CC0-1.0",
   "devDependencies": {
     "electron": "^15.3.0",
+    "electron-builder": "^22.13.1",
     "webpack-cli": "^4.9.1"
   },
   "dependencies": {

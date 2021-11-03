@@ -1,3 +1,5 @@
+import Config from "./Config";
+
 const Renderer = {
 
     start() {
@@ -31,7 +33,7 @@ const Renderer = {
 
             let filelistFilePath = node_path.join(dir, "filelist.txt");
             node_fs.writeFileSync(filelistFilePath, new node_Buffer(files.join("\n"), "utf8"));
-            this.appendMessage(`Created ${filelistFilePath}\n`);
+            this.appendMessage(`创建文件列表 ${filelistFilePath}\n`);
 
             this.startMergeProcess(filelistFilePath);
         }
@@ -42,21 +44,39 @@ const Renderer = {
         this.outputTa.scrollTop = this.outputTa.scrollHeight;
     },
 
+    async getFFmpegPath() {
+        let appPath = await Config.getAppPath();
+        switch (node_os.platform()) {
+            case "win32":
+                return node_path.join(appPath, "bin", "ffmpeg.exe");
+            case "darwin":
+                return node_path.join(appPath, "bin", "ffmpeg_mac");
+            default:
+                return "";
+        }
+    },
+
     async startMergeProcess(filelistFilePath) {
-        let appPath = await electron.ipcRenderer.invoke("getAppDir");
-        let ffmpeg_path = node_path.join(appPath, "bin", "ffmpeg_mac");
+        let ffmpeg_path = await this.getFFmpegPath();
+        if (!ffmpeg_path) {
+            alert("不支持当前系统");
+            return;
+        }
         let desktopDir = node_path.join(node_os.homedir(), "Desktop");
         if (!node_fs.existsSync(desktopDir)) {
             node_fs.mkdirSync(desktopDir);
         }
-        let outputFile = node_path.join(desktopDir, `Merge${Date.now()}.mp4`)
+        this.currentOutputMp4File = node_path.join(desktopDir, `Merge${Date.now()}.mp4`);
+        let args = [
+            "-f", "concat", "-safe", "0", "-i", filelistFilePath,
+            "-c:a", "copy", "-c:v", "copy",
+            this.currentOutputMp4File
+        ];
+        this.btnSelectVideoDir.disabled = true;
+        this.appendMessage(`执行命令 ffmpeg ${args.join(" ")}`);
         let p = node_child_process.spawn(
             ffmpeg_path,
-            [
-                "-f", "concat", "-safe", "0", "-i", filelistFilePath,
-                "-c:a", "copy", "-c:v", "copy",
-                outputFile
-            ]
+            args
         );
         p.stdout.on("data", this.stdoutHandler.bind(this));
         p.stderr.on("data", this.stderrHandler.bind(this));
@@ -73,11 +93,13 @@ const Renderer = {
 
     ffmpegProcessExitHandler(code) {
         this.appendMessage("ffmpeg exit with code " + code);
-        if (code) {
-            this.appendMessage("合并失败");
-        } else {
+        if (code === 0) {
             this.appendMessage("合并成功");
+            this.appendMessage(`文件保存在 ${this.currentOutputMp4File}`);
+        } else {
+            this.appendMessage("合并失败");
         }
+        this.btnSelectVideoDir.disabled = false;
     }
 };
 
